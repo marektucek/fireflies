@@ -5,6 +5,7 @@ import { initNotion, getLastSyncTimestamp, isDuplicate, createMeetingPage } from
 import { transformToNotionPage } from './transform.mjs';
 
 const OVERLAP_BUFFER_MS = 60 * 60 * 1000; // 1 hour
+const MAX_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000; // 3 days hard cap
 const RATE_LIMIT_DELAY_MS = 350;
 
 function sleep(ms) {
@@ -32,6 +33,13 @@ async function main() {
   } else {
     fromDate = new Date(Date.now() - config.lookbackHours * 60 * 60 * 1000);
     console.log(`First run — fetching transcripts from last ${config.lookbackHours}h (${fromDate.toISOString()})`);
+  }
+
+  // Hard cap: never pull meetings older than 3 days
+  const maxLookback = new Date(Date.now() - MAX_LOOKBACK_MS);
+  if (fromDate < maxLookback) {
+    console.log(`  Clamping fromDate to 3-day cap (${maxLookback.toISOString()})`);
+    fromDate = maxLookback;
   }
 
   // 4. Fetch transcripts from Fireflies
