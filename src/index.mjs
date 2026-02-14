@@ -1,5 +1,5 @@
 import { loadConfig } from './config.mjs';
-import { fetchTranscriptsSince } from './fireflies.mjs';
+import { fetchTranscriptsSince, deleteTranscript } from './fireflies.mjs';
 import { generateSummary } from './openai.mjs';
 import { initNotion, getLastSyncTimestamp, isDuplicate, createMeetingPage } from './notion.mjs';
 import { transformToNotionPage } from './transform.mjs';
@@ -7,6 +7,7 @@ import { transformToNotionPage } from './transform.mjs';
 const OVERLAP_BUFFER_MS = 60 * 60 * 1000; // 1 hour
 const MAX_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000; // 3 days hard cap
 const RATE_LIMIT_DELAY_MS = 350;
+const DELETE_DELAY_MS = 6500; // ~9 req/min, safely under Fireflies 10 req/min limit
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -55,6 +56,7 @@ async function main() {
   let synced = 0;
   let skipped = 0;
   let failed = 0;
+  const syncedIds = [];
 
   for (const transcript of transcripts) {
     const label = `"${transcript.title || transcript.id}"`;
@@ -65,6 +67,7 @@ async function main() {
       if (duplicate) {
         console.log(`  SKIP ${label} (already in Notion)`);
         skipped++;
+        syncedIds.push(transcript.id);
         continue;
       }
 
@@ -83,6 +86,7 @@ async function main() {
 
       console.log(`  OK ${label}`);
       synced++;
+      syncedIds.push(transcript.id);
 
       // Rate limit safety
       await sleep(RATE_LIMIT_DELAY_MS);
@@ -94,6 +98,29 @@ async function main() {
 
   // 6. Summary
   console.log(`\n=== Done: ${synced} synced, ${skipped} skipped, ${failed} failed ===`);
+
+  // 7. Delete synced transcripts from Fireflies
+  if (config.deleteAfterSync && failed === 0 && syncedIds.length > 0) {
+    console.log(`\nDeleting ${syncedIds.length} transcript(s) from Fireflies...`);
+    let deleted = 0;
+    let deleteFailed = 0;
+
+    for (const id of syncedIds) {
+      try {
+        const result = await deleteTranscript(config.firefliesApiKey, id);
+        console.log(`  DELETED "${result?.title || id}"`);
+        deleted++;
+        await sleep(DELETE_DELAY_MS);
+      } catch (err) {
+        console.error(`  DELETE FAIL ${id}: ${err.message}`);
+        deleteFailed++;
+      }
+    }
+
+    console.log(`\n=== Deletion: ${deleted} deleted, ${deleteFailed} failed ===`);
+  } else if (config.deleteAfterSync && failed > 0) {
+    console.log('\nSkipping Fireflies deletion — there were sync failures.');
+  }
 
   if (failed > 0) {
     process.exit(1);

@@ -19,5 +19,6 @@ export function loadConfig() {
     openaiApiKey: process.env.OPENAI_API_KEY,
     summaryPrompt: process.env.SUMMARY_PROMPT,
     lookbackHours: parseInt(process.env.LOOKBACK_HOURS || '24', 10),
+    deleteAfterSync: process.env.DELETE_AFTER_SYNC === 'true',
   };
 }

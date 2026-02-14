@@ -44,6 +44,21 @@ async function graphqlRequest(apiKey, query, variables = {}) {
   return json.data;
 }
 
+const DELETE_TRANSCRIPT_MUTATION = `
+  mutation DeleteTranscript($transcriptId: String!) {
+    deleteTranscript(id: $transcriptId) {
+      title
+    }
+  }
+`;
+
+export async function deleteTranscript(apiKey, transcriptId) {
+  const data = await graphqlRequest(apiKey, DELETE_TRANSCRIPT_MUTATION, {
+    transcriptId,
+  });
+  return data.deleteTranscript;
+}
+
 export async function fetchTranscriptsSince(apiKey, fromDate) {
   const allTranscripts = [];
   let skip = 0;
