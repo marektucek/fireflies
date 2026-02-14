@@ -1,0 +1,16 @@
+{
+  "name": "fireflies-notion-sync",
+  "version": "1.0.0",
+  "description": "Sync Fireflies.ai meeting transcripts to Notion with ChatGPT summaries",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.mjs",
+    "sync": "node src/index.mjs"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

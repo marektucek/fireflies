@@ -1,0 +1,29 @@
+name: Fireflies to Notion Sync
+on:
+  schedule:
+    # 11:00, 14:00, 18:00 CET → converted to UTC
+    # CET = UTC+1 (winter), CEST = UTC+2 (summer)
+    # Using winter (CET) offsets below
+    - cron: '0 10 * * *'   # 11:00 CET
+    - cron: '0 13 * * *'   # 14:00 CET
+    - cron: '0 17 * * *'   # 18:00 CET
+  workflow_dispatch: {}     # Manual trigger for testing
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: node src/index.mjs
+        env:
+          FIREFLIES_API_KEY: ${{ secrets.FIREFLIES_API_KEY }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUMMARY_PROMPT: ${{ secrets.SUMMARY_PROMPT }}
