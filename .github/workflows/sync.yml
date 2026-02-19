@@ -1,12 +1,15 @@
 name: Fireflies to Notion Sync
 on:
   schedule:
-    # 11:00, 14:00, 18:00 CET → converted to UTC
+    # 8:00, 11:00, 14:00, 17:00, 20:00, 23:00 CET → converted to UTC
     # CET = UTC+1 (winter), CEST = UTC+2 (summer)
     # Using winter (CET) offsets below
+    - cron: '0 7 * * *'    #  8:00 CET
     - cron: '0 10 * * *'   # 11:00 CET
     - cron: '0 13 * * *'   # 14:00 CET
-    - cron: '0 17 * * *'   # 18:00 CET
+    - cron: '0 16 * * *'   # 17:00 CET
+    - cron: '0 19 * * *'   # 20:00 CET
+    - cron: '0 22 * * *'   # 23:00 CET
   workflow_dispatch: {}     # Manual trigger for testing
 
 jobs:
