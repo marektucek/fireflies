@@ -62,18 +62,17 @@ function parseTable(tableLines) {
       table_width: tableWidth,
       has_column_header: true,
       has_row_header: false,
+      children: rows.map((row) => {
+        const cells = [...row];
+        while (cells.length < tableWidth) cells.push('');
+        return {
+          type: 'table_row',
+          table_row: {
+            cells: cells.map((cell) => [{ type: 'text', text: { content: cell.slice(0, MAX_TEXT_LENGTH) } }]),
+          },
+        };
+      }),
     },
-    children: rows.map((row) => {
-      const cells = [...row];
-      while (cells.length < tableWidth) cells.push('');
-      return {
-        object: 'block',
-        type: 'table_row',
-        table_row: {
-          cells: cells.map((cell) => [{ type: 'text', text: { content: cell.slice(0, MAX_TEXT_LENGTH) } }]),
-        },
-      };
-    }),
   };
 }
 
