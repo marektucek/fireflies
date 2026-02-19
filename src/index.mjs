@@ -43,71 +43,75 @@ async function main() {
     fromDate = maxLookback;
   }
 
-  // 4. Fetch transcripts from Fireflies
-  console.log('\nFetching transcripts from Fireflies...');
-  const transcripts = await fetchTranscriptsSince(config.firefliesApiKey, fromDate);
-
-  if (transcripts.length === 0) {
-    console.log('\nNo new transcripts found. Done.');
-    return;
-  }
-
-  // 5. Process each transcript
+  // 4. Fetch and process transcripts from each Fireflies account
   let synced = 0;
   let skipped = 0;
   let failed = 0;
-  const syncedIds = [];
+  const syncedItems = []; // { apiKey, id } — needed to delete from correct account
 
-  for (const transcript of transcripts) {
-    const label = `"${transcript.title || transcript.id}"`;
+  for (let a = 0; a < config.firefliesApiKeys.length; a++) {
+    const apiKey = config.firefliesApiKeys[a];
+    const accountLabel = config.firefliesApiKeys.length > 1 ? ` (account ${a + 1}/${config.firefliesApiKeys.length})` : '';
 
-    try {
-      // Check for duplicate
-      const duplicate = await isDuplicate(transcript.id);
-      if (duplicate) {
-        console.log(`  SKIP ${label} (already in Notion)`);
-        skipped++;
-        syncedIds.push(transcript.id);
-        continue;
+    console.log(`\nFetching transcripts from Fireflies${accountLabel}...`);
+    const transcripts = await fetchTranscriptsSince(apiKey, fromDate);
+
+    if (transcripts.length === 0) {
+      console.log(`  No new transcripts found${accountLabel}.`);
+      continue;
+    }
+
+    for (const transcript of transcripts) {
+      const label = `"${transcript.title || transcript.id}"`;
+
+      try {
+        // Check for duplicate
+        const duplicate = await isDuplicate(transcript.id);
+        if (duplicate) {
+          console.log(`  SKIP ${label} (already in Notion)`);
+          skipped++;
+          syncedItems.push({ apiKey, id: transcript.id });
+          continue;
+        }
+
+        // Generate AI summary
+        console.log(`  Summarizing ${label}...`);
+        const summary = await generateSummary(
+          config.openaiApiKey,
+          config.summaryPrompt,
+          transcript.sentences,
+        );
+
+        // Transform and create Notion page
+        const { properties, children } = transformToNotionPage(transcript, summary);
+        console.log(`  Creating Notion page for ${label} (${children.length} blocks)...`);
+        await createMeetingPage(properties, children);
+
+        console.log(`  OK ${label}`);
+        synced++;
+        syncedItems.push({ apiKey, id: transcript.id });
+
+        // Rate limit safety
+        await sleep(RATE_LIMIT_DELAY_MS);
+      } catch (err) {
+        console.error(`  FAIL ${label}: ${err.message}`);
+        failed++;
       }
-
-      // Generate AI summary
-      console.log(`  Summarizing ${label}...`);
-      const summary = await generateSummary(
-        config.openaiApiKey,
-        config.summaryPrompt,
-        transcript.sentences,
-      );
-
-      // Transform and create Notion page
-      const { properties, children } = transformToNotionPage(transcript, summary);
-      console.log(`  Creating Notion page for ${label} (${children.length} blocks)...`);
-      await createMeetingPage(properties, children);
-
-      console.log(`  OK ${label}`);
-      synced++;
-      syncedIds.push(transcript.id);
-
-      // Rate limit safety
-      await sleep(RATE_LIMIT_DELAY_MS);
-    } catch (err) {
-      console.error(`  FAIL ${label}: ${err.message}`);
-      failed++;
     }
   }
 
-  // 6. Summary
+  // 5. Summary
   console.log(`\n=== Done: ${synced} synced, ${skipped} skipped, ${failed} failed ===`);
 
-  // 7. Delete synced transcripts from Fireflies
-  if (config.deleteAfterSync && failed === 0 && syncedIds.length > 0) {
-    console.log(`\nDeleting ${syncedIds.length} transcript(s) from Fireflies...`);
+  // 6. Delete synced transcripts from Fireflies
+  if (config.deleteAfterSync && failed === 0 && syncedItems.length > 0) {
+    console.log(`\nDeleting ${syncedItems.length} transcript(s) from Fireflies...`);
     let deleted = 0;
     let deleteFailed = 0;
 
-    for (const id of syncedIds) {
+    for (const { apiKey, id } of syncedItems) {
       try {
-        const result = await deleteTranscript(config.firefliesApiKey, id);
+        const result = await deleteTranscript(apiKey, id);
         console.log(`  DELETED "${result?.title || id}"`);
         deleted++;
         await sleep(DELETE_DELAY_MS);

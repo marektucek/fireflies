@@ -13,7 +13,7 @@ export function loadConfig() {
   }
 
   return {
-    firefliesApiKey: process.env.FIREFLIES_API_KEY,
+    firefliesApiKeys: process.env.FIREFLIES_API_KEY.split(',').map((k) => k.trim()).filter(Boolean),
     notionApiKey: process.env.NOTION_API_KEY,
     notionDatabaseId: process.env.NOTION_DATABASE_ID,
     openaiApiKey: process.env.OPENAI_API_KEY,
