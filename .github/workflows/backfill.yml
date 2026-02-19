@@ -1,0 +1,22 @@
+name: Fireflies → Notion Backfill (Manual)
+on:
+  workflow_dispatch: {}
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: node src/backfill.mjs
+        env:
+          FIREFLIES_API_KEY:   ${{ secrets.FIREFLIES_API_KEY }}
+          NOTION_API_KEY:      ${{ secrets.NOTION_API_KEY }}
+          NOTION_DATABASE_ID:  ${{ secrets.NOTION_DATABASE_ID }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          SUMMARY_PROMPT:      ${{ secrets.SUMMARY_PROMPT }}

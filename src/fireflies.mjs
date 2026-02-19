@@ -59,6 +59,26 @@ export async function deleteTranscript(apiKey, transcriptId) {
   return data.deleteTranscript;
 }
 
+export async function fetchAllTranscripts(apiKey) {
+  const allTranscripts = [];
+  let skip = 0;
+
+  while (true) {
+    console.log(`  Fetching transcripts (skip=${skip}, limit=${PAGE_SIZE})...`);
+    const data = await graphqlRequest(apiKey, TRANSCRIPTS_QUERY, {
+      limit: PAGE_SIZE,
+      skip,
+    });
+    const batch = data.transcripts || [];
+    allTranscripts.push(...batch);
+    if (batch.length < PAGE_SIZE) break;
+    skip += PAGE_SIZE;
+  }
+
+  console.log(`  Found ${allTranscripts.length} total transcript(s)`);
+  return allTranscripts;
+}
+
 export async function fetchTranscriptsSince(apiKey, fromDate) {
   const allTranscripts = [];
   let skip = 0;
