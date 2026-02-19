@@ -32,6 +32,105 @@ function textToParagraphBlocks(text) {
   }));
 }
 
+function rt(text) {
+  return [{ type: 'text', text: { content: text.slice(0, MAX_TEXT_LENGTH) } }];
+}
+
+function isSeparatorRow(line) {
+  return /^\|[\s\-:|]+\|?$/.test(line.trim());
+}
+
+function parseTable(tableLines) {
+  const rows = tableLines
+    .filter((line) => !isSeparatorRow(line))
+    .map((line) =>
+      line
+        .split('|')
+        .slice(1, -1)
+        .map((cell) => cell.trim()),
+    )
+    .filter((row) => row.some((cell) => cell !== ''));
+
+  if (rows.length === 0) return null;
+
+  const tableWidth = Math.max(...rows.map((r) => r.length));
+
+  return {
+    object: 'block',
+    type: 'table',
+    table: {
+      table_width: tableWidth,
+      has_column_header: true,
+      has_row_header: false,
+    },
+    children: rows.map((row) => {
+      const cells = [...row];
+      while (cells.length < tableWidth) cells.push('');
+      return {
+        object: 'block',
+        type: 'table_row',
+        table_row: {
+          cells: cells.map((cell) => [{ type: 'text', text: { content: cell.slice(0, MAX_TEXT_LENGTH) } }]),
+        },
+      };
+    }),
+  };
+}
+
+function parseMarkdownToBlocks(text) {
+  if (!text) return [];
+
+  const lines = text.split('\n');
+  const blocks = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const trimmed = lines[i].trim();
+
+    if (!trimmed) { i++; continue; }
+
+    if (trimmed.startsWith('### ')) {
+      blocks.push({ object: 'block', type: 'heading_3', heading_3: { rich_text: rt(trimmed.slice(4)) } });
+      i++; continue;
+    }
+    if (trimmed.startsWith('## ')) {
+      blocks.push({ object: 'block', type: 'heading_2', heading_2: { rich_text: rt(trimmed.slice(3)) } });
+      i++; continue;
+    }
+    if (trimmed.startsWith('# ')) {
+      blocks.push({ object: 'block', type: 'heading_1', heading_1: { rich_text: rt(trimmed.slice(2)) } });
+      i++; continue;
+    }
+
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      blocks.push({ object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: rt(trimmed.slice(2)) } });
+      i++; continue;
+    }
+
+    const numMatch = trimmed.match(/^\d+\.\s+(.+)/);
+    if (numMatch) {
+      blocks.push({ object: 'block', type: 'numbered_list_item', numbered_list_item: { rich_text: rt(numMatch[1]) } });
+      i++; continue;
+    }
+
+    if (trimmed.startsWith('|')) {
+      const tableLines = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      const tableBlock = parseTable(tableLines);
+      if (tableBlock) blocks.push(tableBlock);
+      continue;
+    }
+
+    blocks.push({ object: 'block', type: 'paragraph', paragraph: { rich_text: rt(trimmed) } });
+    i++;
+  }
+
+  return blocks;
+}
+
 function buildTranscriptText(sentences) {
   if (!sentences || sentences.length === 0) return '(No transcript available)';
   return sentences
@@ -97,7 +196,7 @@ export function transformToNotionPage(transcript, summary) {
       rich_text: [{ type: 'text', text: { content: 'AI Summary' } }],
     },
   });
-  children.push(...textToParagraphBlocks(summary || '(No summary generated)'));
+  children.push(...parseMarkdownToBlocks(summary || '(No summary generated)'));
 
   // Transcript section
   children.push({
