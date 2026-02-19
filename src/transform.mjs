@@ -139,10 +139,18 @@ function buildTranscriptText(sentences) {
 
 function getAttendeeNames(attendees) {
   if (!attendees || attendees.length === 0) return [];
-  return attendees.map((a) => {
-    const name = a.displayName || a.email || 'Unknown';
-    return name.slice(0, MAX_MULTISELECT_LENGTH);
-  });
+  return attendees
+    .map((a) => a.displayName?.trim())
+    .filter(Boolean)
+    .map((name) => name.slice(0, MAX_MULTISELECT_LENGTH));
+}
+
+function getAttendeeEmails(attendees) {
+  if (!attendees || attendees.length === 0) return [];
+  return attendees
+    .map((a) => a.email?.trim())
+    .filter(Boolean)
+    .map((email) => email.slice(0, MAX_MULTISELECT_LENGTH));
 }
 
 export function transformToNotionPage(transcript, summary) {
@@ -150,6 +158,7 @@ export function transformToNotionPage(transcript, summary) {
   const date = parseDate(transcript.date);
   const duration = transcript.duration ? Math.round(transcript.duration / 60) : null;
   const attendeeNames = getAttendeeNames(transcript.meeting_attendees);
+  const attendeeEmails = getAttendeeEmails(transcript.meeting_attendees);
   const transcriptText = buildTranscriptText(transcript.sentences);
   const now = new Date().toISOString();
 
@@ -177,6 +186,12 @@ export function transformToNotionPage(transcript, summary) {
   if (attendeeNames.length > 0) {
     properties.Attendees = {
       multi_select: attendeeNames.map((name) => ({ name })),
+    };
+  }
+
+  if (attendeeEmails.length > 0) {
+    properties['Attendee Emails'] = {
+      multi_select: attendeeEmails.map((email) => ({ name: email })),
     };
   }
 
