@@ -195,10 +195,6 @@ export function transformToNotionPage(transcript, summary) {
     };
   }
 
-  if (transcript.transcript_url) {
-    properties['Transcript URL'] = { url: transcript.transcript_url };
-  }
-
   // Page body (children blocks)
   const children = [];
 

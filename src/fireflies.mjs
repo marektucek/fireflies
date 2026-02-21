@@ -8,7 +8,6 @@ const TRANSCRIPTS_QUERY = `
       title
       date
       duration
-      transcript_url
       meeting_attendees {
         displayName
         email
