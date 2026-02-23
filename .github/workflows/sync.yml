@@ -29,5 +29,5 @@ jobs:
           NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SUMMARY_PROMPT: ${{ secrets.SUMMARY_PROMPT }}
+          SUMMARY_PROMPT: ${{ vars.SUMMARY_PROMPT }}
           DELETE_AFTER_SYNC: 'true'
