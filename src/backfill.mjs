@@ -40,7 +40,7 @@ async function main() {
           continue;
         }
         console.log(`  Summarizing ${label}...`);
-        const summary = await generateSummary(config.openaiApiKey, config.summaryPrompt, transcript.sentences);
+        const summary = await generateSummary(config.geminiApiKey, config.summaryPrompt, transcript.sentences);
         const { properties, children } = transformToNotionPage(transcript, summary);
         console.log(`  Creating Notion page for ${label} (${children.length} blocks)...`);
         await createMeetingPage(properties, children);

@@ -77,7 +77,7 @@ async function main() {
         // Generate AI summary
         console.log(`  Summarizing ${label}...`);
         const summary = await generateSummary(
-          config.openaiApiKey,
+          config.geminiApiKey,
           config.summaryPrompt,
           transcript.sentences,
         );

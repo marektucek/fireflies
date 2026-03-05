@@ -1,6 +1,6 @@
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const MODEL = 'gpt-4o-mini';
-const MAX_TRANSCRIPT_CHARS = 400_000; // ~100K tokens for gpt-4o-mini
+const GEMINI_API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
+const MAX_TRANSCRIPT_CHARS = 400_000;
 
 function buildTranscriptText(sentences) {
   if (!sentences || sentences.length === 0) return '(No transcript available)';
@@ -33,19 +33,23 @@ function truncateTranscript(sentences, maxChars) {
 export async function generateSummary(apiKey, systemPrompt, sentences) {
   const transcriptText = truncateTranscript(sentences, MAX_TRANSCRIPT_CHARS);
 
-  const res = await fetch(OPENAI_API_URL, {
+  const res = await fetch(GEMINI_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+      'x-goog-api-key': apiKey,
     },
     body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: transcriptText },
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: `${systemPrompt}\n\nTranscript:\n${transcriptText}`,
+            },
+          ],
+        },
       ],
-      temperature: 0.3,
     }),
   });
 
@@ -55,5 +59,10 @@ export async function generateSummary(apiKey, systemPrompt, sentences) {
   }
 
   const json = await res.json();
-  return json.choices[0].message.content;
+  const candidate = json.candidates?.[0];
+  if (!candidate || !candidate.content?.parts?.length) {
+    throw new Error(`Gemini API unexpected response: ${JSON.stringify(json)}`);
+  }
+
+  return candidate.content.parts.map((p) => p.text || '').join('\n').trim();
 }
