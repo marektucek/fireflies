@@ -25,4 +25,4 @@ jobs:
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUMMARY_PROMPT: ${{ vars.SUMMARY_PROMPT }}
-          DELETE_AFTER_SYNC: 'false'
+          DELETE_AFTER_SYNC: 'true'
